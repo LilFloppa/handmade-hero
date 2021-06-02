@@ -155,7 +155,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
 
-    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.lpfnWndProc = Win32MainWindowCallback;
     wc.hInstance = instance;
     wc.lpszClassName = CLASS_NAME;
