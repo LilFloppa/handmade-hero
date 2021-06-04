@@ -326,11 +326,23 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 
 	ShowWindow(window, showCode);
 
-	Win32InitDSound(window, 48000, 2 * 48000 * sizeof(int16));
+	int toneVolume = 16000;
+	int samplesPerSecond = 48000;
+	int bytesPerSample = 2 * sizeof(int16);
+	int hz = 256;
+	uint32 runningSampleIndex = 0;
+	int squareWavePeriod = samplesPerSecond / hz;
+	int halfSquareWavePeriod = squareWavePeriod / 2;
+	int bufferSize = samplesPerSecond * bytesPerSample;
+
+	Win32InitDSound(window, samplesPerSecond, bufferSize);
+
+	GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
 	GlobalRunning = true;
 	int xOffset = 0;
 	int yOffset = 0;
+	
 	MSG msg;
 
 	while (GlobalRunning)
@@ -377,6 +389,54 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 				// NOTE(nikita): This controller is not available
 			}
 		}
+
+		// NOTE(nikita): DirectSound output test
+
+		DWORD playCursor;
+		DWORD writeCursor;
+
+		GlobalSecondaryBuffer->GetCurrentPosition(&playCursor, &writeCursor);
+		DWORD byteToLock = runningSampleIndex * bytesPerSample % bufferSize;
+		DWORD bytesToWrite;
+		if (byteToLock > playCursor)
+		{
+			bytesToWrite = bufferSize - byteToLock;
+			bytesToWrite += playCursor;
+		}
+		else
+		{
+			bytesToWrite = playCursor - byteToLock;
+		}
+
+
+		VOID* region1;
+		DWORD region1Size;
+		VOID* region2;
+		DWORD region2Size;
+
+		GlobalSecondaryBuffer->Lock(byteToLock, bytesToWrite, &region1, &region1Size, &region2, &region2Size, 0);
+
+		int16* sampleOut = (int16*)region1;
+		DWORD region1SampleCount = region1Size / bytesPerSample;
+		for (DWORD sampleIndex = 0; sampleIndex < region1SampleCount; sampleIndex++)
+		{
+			int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2)? toneVolume : -toneVolume;
+			*sampleOut++ = sampleValue;
+			*sampleOut++ = sampleValue;
+			runningSampleIndex++;
+		}
+
+		sampleOut = (int16*)region2;
+		DWORD region2SampleCount = region2Size / bytesPerSample;
+		for (DWORD sampleIndex = 0; sampleIndex < region2SampleCount; sampleIndex++)
+		{
+			int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? toneVolume : -toneVolume;
+			*sampleOut++ = sampleValue;
+			*sampleOut++ = sampleValue;
+			runningSampleIndex++;
+		}
+
+		GlobalSecondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
 
 		RenderWeirdGradient(&GlobalBackbuffer, xOffset, yOffset);
 		win32_window_dimension dimension = Win32GetWindowDimension(window);
