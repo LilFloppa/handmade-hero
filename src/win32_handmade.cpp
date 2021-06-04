@@ -62,6 +62,7 @@ typedef DIRECT_SOUND_CREATE(direct_sound_create);
 // TODO(nikita): This is a global for now.
 global_variable bool GlobalRunning;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
+global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 
 internal void Win32InitDSound(HWND window, int32 samplesPerSecond, int32 bufferSize)
 {
@@ -70,9 +71,9 @@ internal void Win32InitDSound(HWND window, int32 samplesPerSecond, int32 bufferS
 
 	if (dSoundLibrary)
 	{
-		// NOTE(nikita): Get a DirectSound object!
 		direct_sound_create* directSoundCreate = (direct_sound_create*)GetProcAddress(dSoundLibrary, "DirectSoundCreate");
 
+		// NOTE(nikita): Get a DirectSound object
 		LPDIRECTSOUND directSound;
 		if (directSoundCreate && SUCCEEDED(directSoundCreate(0, &directSound, 0)))
 		{
@@ -80,16 +81,16 @@ internal void Win32InitDSound(HWND window, int32 samplesPerSecond, int32 bufferS
 			waveFormat.wFormatTag = WAVE_FORMAT_PCM;
 			waveFormat.nChannels = 2;
 			waveFormat.nSamplesPerSec = samplesPerSecond;
+			waveFormat.wBitsPerSample = 16;
 			waveFormat.nBlockAlign = waveFormat.nChannels * waveFormat.wBitsPerSample / 8;
 			waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
-			waveFormat.wBitsPerSample = 16;
-			waveFormat.cbSize = sizeof(WAVEFORMATEX);
+			waveFormat.cbSize = 0;
 
-			if (!SUCCEEDED(directSound->SetCooperativeLevel(window, DSSCL_PRIORITY)))
+			if (SUCCEEDED(directSound->SetCooperativeLevel(window, DSSCL_PRIORITY)))
 			{
 				DSBUFFERDESC bufferDescription = {};
-				bufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
 				bufferDescription.dwSize = sizeof(bufferDescription);
+				bufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
 
 				// NOTE(nikita): Create a primary buffer
 				LPDIRECTSOUNDBUFFER primaryBuffer;
@@ -115,14 +116,13 @@ internal void Win32InitDSound(HWND window, int32 samplesPerSecond, int32 bufferS
 			// NOTE(nikita): Create a secondary buffer
 			DSBUFFERDESC bufferDescription = {};
 			bufferDescription.dwSize = sizeof(bufferDescription); 
-			bufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+			bufferDescription.dwFlags = 0;
 			bufferDescription.dwBufferBytes = bufferSize;
 			bufferDescription.lpwfxFormat = &waveFormat;
 
-			LPDIRECTSOUNDBUFFER secondaryBuffer;
-			if (SUCCEEDED(directSound->CreateSoundBuffer(&bufferDescription, &secondaryBuffer, 0)))
+			if (SUCCEEDED(directSound->CreateSoundBuffer(&bufferDescription, &GlobalSecondaryBuffer, 0)))
 			{
-				if (SUCCEEDED(secondaryBuffer->SetFormat(&waveFormat)))
+				if (SUCCEEDED(GlobalSecondaryBuffer->SetFormat(&waveFormat)))
 				{
 					// NOTE(nikita): We have finally set the format!
 				}
