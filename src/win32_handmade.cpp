@@ -349,6 +349,11 @@ void Win32FillSoundBuffer(win32_sound_output* soundOutput, DWORD byteToLock, DWO
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, int showCode)
 {
 	Win32LoadXInput();
+
+	LARGE_INTEGER perfCountFrequencyResult;
+	QueryPerformanceFrequency(&perfCountFrequencyResult);
+	int64 perfCountFrequency = perfCountFrequencyResult.QuadPart;
+
 	const wchar_t CLASS_NAME[] = L"Sample Window Class";
 	WNDCLASS wc = { };
 
@@ -401,8 +406,14 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 	
 	MSG msg;
 
+	LARGE_INTEGER lastCounter;
+	QueryPerformanceCounter(&lastCounter);
+
 	while (GlobalRunning)
 	{
+		LARGE_INTEGER beginCounter;
+		QueryPerformanceCounter(&beginCounter);
+
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
 		{
 			if (msg.message == WM_QUIT)
@@ -481,7 +492,20 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 		ReleaseDC(window, hdc);
 
 		xOffset++;
-		yOffset += 2;
+		yOffset++;
+
+		LARGE_INTEGER endCounter;
+		QueryPerformanceCounter(&endCounter);
+
+		int64 counterElapsed = endCounter.QuadPart - lastCounter.QuadPart;
+		int32 msPerFrame = 1000 * counterElapsed / perfCountFrequency;
+		int32 fps = perfCountFrequency / counterElapsed;
+
+		wchar_t buffer[256];
+		wsprintf(buffer, L"Milliseconds / frame: %dms / %dFPS\n", msPerFrame, fps);
+		OutputDebugString(buffer);
+
+		lastCounter = endCounter;
 	}
 
 	return 0;
