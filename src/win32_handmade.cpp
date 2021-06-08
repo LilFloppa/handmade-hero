@@ -1,30 +1,30 @@
+/*
+	TODO: THIS IS NOW A FINAL PLATFORM LAYER!!!
+
+	- Save game locations
+	- getting a handle to our own executable file
+	- Asset loading path
+	- Threading (launch a thread)
+	- Raw Input (supprt for multiple keyborads)
+	- Sleep/TimeBeginPeriod
+	- ClipCursor() (for multimonitor support)
+	- Fullscreen support
+	- WM_SETCURSOR (control cursor visibility)
+	- QueryCancelAutoplay
+	- WM_ACTIVATEAPP (for when we are not the active application)
+	- Blit speed improvements (BitBlt)
+	- Hardware acceleration (OpenGL or Direct3D or BOTH???)
+	- GetKeyboardLayout (for French keyboards, international WASD support)
+	
+	Just a partial list of stuff!!!
+*/
+
 #include <windows.h>
-#include <stdint.h>
 #include <xinput.h>
 #include <dsound.h>
 #include <math.h>
 
-#define internal static
-#define local_persist static
-#define global_variable static
-
-#define PI32 3.14159265359f
-
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-
-typedef int32 bool32;
-
-typedef float f32;
-typedef double f64;
-
+#include "handmade.h"
 
 struct win32_offscreen_buffer
 {
@@ -170,25 +170,6 @@ internal win32_window_dimension Win32GetWindowDimension(HWND window)
 	return result;
 }
 
-internal void RenderWeirdGradient(win32_offscreen_buffer* buffer, int xOffset, int yOffset)
-{
-	// TODO(nikita): Let's see what the optimizer does
-	uint8* row = (uint8*)buffer->Memory;
-	for (int y = 0; y < buffer->Height; y++)
-	{
-		uint32* pixel = (uint32*)row;
-		for (int x = 0; x < buffer->Width; x++)
-		{
-			uint8 Blue = (x + xOffset);
-			uint8 Green = (y + yOffset);
-			uint8 Red = 128;
-			*pixel++ = (Blue | (Green << 8) | (Red << 16));
-		}
-
-		row += buffer->Pitch;
-	}
-}
-
 internal void Win32ResizeDIBSection(win32_offscreen_buffer* buffer, int width, int height)
 {
 	if (buffer->Memory)
@@ -298,7 +279,6 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND window, UINT msg, WPARAM wParam, L
 	return DefWindowProc(window, msg, wParam, lParam);
 }
 
-
 struct win32_sound_output
 {
 	int ToneVolume;
@@ -308,6 +288,8 @@ struct win32_sound_output
 	uint32 RunningSampleIndex;
 	int WavePeriod;
 	int BufferSize;
+	f32 t;
+	int LatencySampleCount;
 };
 
 void Win32FillSoundBuffer(win32_sound_output* soundOutput, DWORD byteToLock, DWORD bytesToWrite)
@@ -323,11 +305,11 @@ void Win32FillSoundBuffer(win32_sound_output* soundOutput, DWORD byteToLock, DWO
 	DWORD region1SampleCount = region1Size / soundOutput->BytesPerSample;
 	for (DWORD sampleIndex = 0; sampleIndex < region1SampleCount; sampleIndex++)
 	{
-		f32 t = 2.0f * PI32 * (f32)soundOutput->RunningSampleIndex / (f32)soundOutput->WavePeriod;
-		f32 sineValue = sinf(t);
+		f32 sineValue = sinf(soundOutput->t);
 		int16 sampleValue = (int16)(sineValue * soundOutput->ToneVolume);
 		*sampleOut++ = sampleValue;
 		*sampleOut++ = sampleValue;
+		soundOutput->t += 2.0f * PI32 * 1.0f / (f32)soundOutput->WavePeriod;
 		soundOutput->RunningSampleIndex++;
 	}
 
@@ -335,11 +317,11 @@ void Win32FillSoundBuffer(win32_sound_output* soundOutput, DWORD byteToLock, DWO
 	DWORD region2SampleCount = region2Size / soundOutput->BytesPerSample;
 	for (DWORD sampleIndex = 0; sampleIndex < region2SampleCount; sampleIndex++)
 	{
-		f32 t = 2.0f * PI32 * (f32)soundOutput->RunningSampleIndex / (f32)soundOutput->WavePeriod;
-		f32 sineValue = sinf(t);
+		f32 sineValue = sinf(soundOutput->t);
 		int16 sampleValue = (int16)(sineValue * soundOutput->ToneVolume);
 		*sampleOut++ = sampleValue;
 		*sampleOut++ = sampleValue;
+		soundOutput->t += 2.0f * PI32 * 1.0f / (f32)soundOutput->WavePeriod;
 		soundOutput->RunningSampleIndex++;
 	}
 
@@ -394,9 +376,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 	soundOutput.RunningSampleIndex = 0;
 	soundOutput.WavePeriod = soundOutput.SamplesPerSecond / soundOutput.ToneHz;
 	soundOutput.BufferSize = soundOutput.SamplesPerSecond * soundOutput.BytesPerSample;
+	soundOutput.LatencySampleCount = soundOutput.SamplesPerSecond / 15;
 
 	Win32InitDSound(window, soundOutput.SamplesPerSecond, soundOutput.BufferSize);
-	Win32FillSoundBuffer(&soundOutput, 0, soundOutput.BufferSize);
+	Win32FillSoundBuffer(&soundOutput, 0, soundOutput.LatencySampleCount * soundOutput.BytesPerSample);
 
 	GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
@@ -409,11 +392,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 	LARGE_INTEGER lastCounter;
 	QueryPerformanceCounter(&lastCounter);
 
+	int64 lastCycleCount = __rdtsc();
+
 	while (GlobalRunning)
 	{
-		LARGE_INTEGER beginCounter;
-		QueryPerformanceCounter(&beginCounter);
-
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
 		{
 			if (msg.message == WM_QUIT)
@@ -450,6 +432,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 
 				int16 stickX = pad->sThumbLX;
 				int16 stickY = pad->sThumbLY;
+
+				xOffset += stickX >> 12;
+				yOffset -= stickY >> 12;
+
+				soundOutput.ToneHz = 512 + (int32)(256.0f * ((f32)stickY / 30000.0f));
+				soundOutput.WavePeriod = soundOutput.SamplesPerSecond / soundOutput.ToneHz;
 			}
 			else
 			{
@@ -464,48 +452,55 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 
 		GlobalSecondaryBuffer->GetCurrentPosition(&playCursor, &writeCursor);
 		DWORD byteToLock = (soundOutput.RunningSampleIndex * soundOutput.BytesPerSample) % soundOutput.BufferSize;
+
+		DWORD targetCursor = (playCursor + soundOutput.LatencySampleCount * soundOutput.BytesPerSample) % soundOutput.BufferSize;
 		DWORD bytesToWrite;
 
-		// TODO: Change this to using a lower latency offset from the playcursor
-		// when we actually start having sound effects.
-		if (byteToLock == playCursor)
-		{
-			bytesToWrite = 0;
-		}
-		else if (byteToLock > playCursor)
+		if (byteToLock > targetCursor)
 		{
 			bytesToWrite = soundOutput.BufferSize - byteToLock;
-			bytesToWrite += playCursor;
+			bytesToWrite += targetCursor;
 		}
 		else
 		{
-			bytesToWrite = playCursor - byteToLock;
+			bytesToWrite = targetCursor - byteToLock;
 		}
 
 		Win32FillSoundBuffer(&soundOutput, byteToLock, bytesToWrite);	
 
-		RenderWeirdGradient(&GlobalBackbuffer, xOffset, yOffset);
+		game_offscreen_buffer buffer = {};
+		buffer.Memory = GlobalBackbuffer.Memory;
+		buffer.Width = GlobalBackbuffer.Width;
+		buffer.Height = GlobalBackbuffer.Height;
+		buffer.Pitch = GlobalBackbuffer.Pitch;
+
+		GameUpdateAndRender(&buffer, xOffset, yOffset);
 		win32_window_dimension dimension = Win32GetWindowDimension(window);
 
 		HDC hdc = GetDC(window);
 		Win32DisplayBufferInWindow(hdc, dimension.Width, dimension.Height, &GlobalBackbuffer, 0, 0, dimension.Width, dimension.Height);
 		ReleaseDC(window, hdc);
 
-		xOffset++;
-		yOffset++;
-
 		LARGE_INTEGER endCounter;
 		QueryPerformanceCounter(&endCounter);
 
+
+		int64 endCycleCount = __rdtsc();
+
+		int64 cyclesElapsed = endCycleCount - lastCycleCount;
 		int64 counterElapsed = endCounter.QuadPart - lastCounter.QuadPart;
 		int32 msPerFrame = 1000 * counterElapsed / perfCountFrequency;
 		int32 fps = perfCountFrequency / counterElapsed;
+		int32 mcpf = (int32)(cyclesElapsed / (1000 * 1000));
 
+#if 0
 		wchar_t buffer[256];
-		wsprintf(buffer, L"Milliseconds / frame: %dms / %dFPS\n", msPerFrame, fps);
+		wsprintf(buffer, L"%dms/f, %df/s, %dmc/s\n", msPerFrame, fps, mcpf);
 		OutputDebugString(buffer);
+#endif
 
 		lastCounter = endCounter;
+		lastCycleCount = endCycleCount;
 	}
 
 	return 0;
