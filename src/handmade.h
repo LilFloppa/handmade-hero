@@ -37,6 +37,12 @@ struct game_offscreen_buffer
 	int Pitch;
 };
 
-void GameUpdateAndRender(game_offscreen_buffer* buffer, int xOffset, int yOffset);
+struct game_sound_buffer
+{
+	int SamplesPerSecond;
+	int SamplesCount;
+	int16* Samples;
+};
+void GameUpdateAndRender(game_offscreen_buffer* buffer, int xOffset, int yOffset, game_sound_buffer* soundBuffer);
 
 #endif // !HANDMANDE_H
