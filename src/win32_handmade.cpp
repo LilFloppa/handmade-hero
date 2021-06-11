@@ -348,6 +348,12 @@ internal void Win32ClearSoundBuffer(win32_sound_buffer* soundBuffer)
 	GlobalSecondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
 }
 
+internal void Win32ProcessXInputDigitalButton(DWORD xInputButtonState, game_button_state* oldState, DWORD buttonBit, game_button_state* newState)
+{
+	newState->EndedDown = ((xInputButtonState & buttonBit) == buttonBit);
+	newState->HalfTransitionCount = (oldState->EndedDown != newState->EndedDown) ? 1 : 0;
+}
+
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, int showCode)
 {
 	Win32LoadXInput();
@@ -389,6 +395,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 
 	ShowWindow(window, showCode);
 
+	game_memory gameMemory = {};
+	gameMemory.PermanentStorageSize = Megabytes(64);
+	gameMemory.PermanentStorage = (int16*)VirtualAlloc(0, gameMemory.PermanentStorageSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
 	win32_sound_buffer soundOutput = {};
 
@@ -419,6 +428,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 
 	int64 lastCycleCount = __rdtsc();
 
+	game_input input[2];
+	game_input* newInput = &input[0];
+	game_input* oldInput = &input[1];
+
 	while (GlobalRunning)
 	{
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
@@ -432,9 +445,18 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 			DispatchMessage(&msg);
 		}
 
-		//TODO(nikita): Should we poll this more frequently
-		for (DWORD controllerIndex = 0; controllerIndex < XUSER_MAX_COUNT; controllerIndex++)
+		int maxControllerCount = XUSER_MAX_COUNT;
+		if (maxControllerCount > ArrayCount(newInput->Controllers))
 		{
+			maxControllerCount = ArrayCount(newInput->Controllers);
+		}
+
+		//TODO(nikita): Should we poll this more frequently
+		for (DWORD controllerIndex = 0; controllerIndex < maxControllerCount; controllerIndex++)
+		{
+			game_controller_input* oldController = &oldInput->Controllers[controllerIndex];
+			game_controller_input* newController = &newInput->Controllers[controllerIndex];
+
 			XINPUT_STATE controllerState;
 			if (XInputGetState(controllerIndex, &controllerState) == ERROR_SUCCESS)
 			{
@@ -442,27 +464,31 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 				// TODO(nikita): See if controllerState.dwPacketNumber increments too rapidly
 				XINPUT_GAMEPAD* pad = &controllerState.Gamepad;
 
-				bool up = (pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-				bool down = (pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-				bool left = (pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-				bool right = (pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
-				bool start = (pad->wButtons & XINPUT_GAMEPAD_START);
-				bool back = (pad->wButtons & XINPUT_GAMEPAD_BACK);
-				bool leftShoulder = (pad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
-				bool rightShoulder = (pad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
-				bool AButton = (pad->wButtons & XINPUT_GAMEPAD_A);
-				bool BButton = (pad->wButtons & XINPUT_GAMEPAD_B);
-				bool XButton = (pad->wButtons & XINPUT_GAMEPAD_X);
-				bool YButton = (pad->wButtons & XINPUT_GAMEPAD_Y);
+				f32 X;
+				if (pad->sThumbLX < 0)
+					X = (f32)pad->sThumbLX / 32768.0f;
+				else
+					X = (f32)pad->sThumbLX / 32767.0f;
 
-				int16 stickX = pad->sThumbLX;
-				int16 stickY = pad->sThumbLY;
+				f32 Y;
+				if (pad->sThumbLX < 0)
+					Y = (f32)pad->sThumbLY / 32768.0f;
+				else
+					Y = (f32)pad->sThumbLY / 32767.0f;
 
-				xOffset += stickX >> 12;
-				yOffset -= stickY >> 12;
+				newController->IsAnalog = true;
+				newController->StartX = newController->EndX;
+				newController->StartY = newController->EndY;
 
-				soundOutput.ToneHz = 512 + (int32)(256.0f * ((f32)stickY / 30000.0f));
-				soundOutput.WavePeriod = soundOutput.SamplesPerSecond / soundOutput.ToneHz;
+				newController->MinX = newController->MaxX = newController->EndX = X;
+				newController->MinY = newController->MaxY = newController->EndY = Y;
+
+				Win32ProcessXInputDigitalButton(pad->wButtons, &oldController->Down, XINPUT_GAMEPAD_A, &newController->Down);
+				Win32ProcessXInputDigitalButton(pad->wButtons, &oldController->Right, XINPUT_GAMEPAD_B, &newController->Right);
+				Win32ProcessXInputDigitalButton(pad->wButtons, &oldController->Left, XINPUT_GAMEPAD_X, &newController->Left);
+				Win32ProcessXInputDigitalButton(pad->wButtons, &oldController->Up, XINPUT_GAMEPAD_Y, &newController->Up);
+				Win32ProcessXInputDigitalButton(pad->wButtons, &oldController->LeftShoulder, XINPUT_GAMEPAD_LEFT_SHOULDER, &newController->LeftShoulder);
+				Win32ProcessXInputDigitalButton(pad->wButtons, &oldController->RightShoulder, XINPUT_GAMEPAD_RIGHT_SHOULDER, &newController->RightShoulder);
 			}
 			else
 			{
@@ -508,7 +534,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 		buffer.Height = GlobalBackbuffer.Height;
 		buffer.Pitch = GlobalBackbuffer.Pitch;
 
-		GameUpdateAndRender(&buffer, xOffset, yOffset, &soundBuffer);
+		GameUpdateAndRender(&gameMemory, newInput, &buffer, &soundBuffer);
 
 
 		// NOTE(nikita): DirectSound output test
@@ -543,6 +569,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 
 		lastCounter = endCounter;
 		lastCycleCount = endCycleCount;
+
+		game_input* temp = newInput;
+		newInput = oldInput;
+		oldInput = temp;
 	}
 
 	return 0;

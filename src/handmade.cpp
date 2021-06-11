@@ -22,11 +22,10 @@ void RenderWeirdGradient(game_offscreen_buffer* buffer, int xOffset, int yOffset
 	}
 }
 
-internal void GameOutputSound(game_sound_buffer* soundBuffer)
+internal void GameOutputSound(game_sound_buffer* soundBuffer, int toneHz)
 {
 	local_persist f32 t;
 	int16 toneVolume = 600;
-	int toneHz = 256;
 	int wavePeriod = soundBuffer->SamplesPerSecond / toneHz;
 
 	int16* sampleOut = soundBuffer->Samples;
@@ -42,8 +41,30 @@ internal void GameOutputSound(game_sound_buffer* soundBuffer)
 	}
 }
 
-void GameUpdateAndRender(game_offscreen_buffer* buffer, int xOffset, int yOffset, game_sound_buffer* soundBuffer)
+void GameUpdateAndRender(game_memory* memory, game_input* input, game_offscreen_buffer* buffer, game_sound_buffer* soundBuffer)
 {
-	GameOutputSound(soundBuffer);
-	RenderWeirdGradient(buffer, xOffset, yOffset);
+	game_state* gameState = (game_state*)memory->PermanentStorage;
+
+	if (memory->IsInitialized)
+	{
+		gameState->ToneHz = 256;
+		gameState->GreenOffset = 0;
+		gameState->BlueOffset = 0;
+
+		// TODO: This may be more appropritate to do in the platform layer
+		memory->IsInitialized = true;
+	}
+
+	game_controller_input* input0 = &(input->Controllers[0]);
+
+	if (input0->Down.EndedDown)
+	{
+		gameState->GreenOffset += 1;
+	}
+
+	gameState->ToneHz = 256 + (int)(128.0f * input0->EndY);
+	gameState->BlueOffset += (int)4.0f * (input0->EndX);
+
+	GameOutputSound(soundBuffer, gameState->ToneHz);
+	RenderWeirdGradient(buffer, gameState->BlueOffset, gameState->GreenOffset);
 }
