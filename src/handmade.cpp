@@ -43,8 +43,9 @@ internal void GameOutputSound(game_sound_buffer* soundBuffer, int toneHz)
 
 void GameUpdateAndRender(game_memory* memory, game_input* input, game_offscreen_buffer* buffer, game_sound_buffer* soundBuffer)
 {
-	game_state* gameState = (game_state*)memory->PermanentStorage;
+	Assert(sizeof(game_state) <= memory->PermanentStorageSize);
 
+	game_state* gameState = (game_state*)memory->PermanentStorage;
 	if (memory->IsInitialized)
 	{
 		gameState->ToneHz = 256;

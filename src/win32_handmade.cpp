@@ -395,9 +395,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 
 	ShowWindow(window, showCode);
 
+	LPVOID baseAddress = (LPVOID)Terabytes(2);
+
 	game_memory gameMemory = {};
 	gameMemory.PermanentStorageSize = Megabytes(64);
-	gameMemory.PermanentStorage = (int16*)VirtualAlloc(0, gameMemory.PermanentStorageSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	gameMemory.TransientStorageSize = Gigabytes(4);
+
+	uint64 totalSize = gameMemory.PermanentStorageSize + gameMemory.TransientStorageSize;
+
+	gameMemory.PermanentStorage = VirtualAlloc(baseAddress, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	gameMemory.TransientStorage = ((uint8*)gameMemory.PermanentStorage + gameMemory.PermanentStorageSize);
 
 	win32_sound_buffer soundOutput = {};
 

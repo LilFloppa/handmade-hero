@@ -3,10 +3,6 @@
 
 #include <stdint.h>
 
-#define Kilobytes(value) ((value) * 1024)
-#define Megabytes(value) (Kilobytes(value) * 1024)
-#define Gigabytes(value) (Megabytes(value) * 1024)
-
 #define internal static
 #define local_persist static
 #define global_variable static
@@ -27,6 +23,17 @@ typedef int32 bool32;
 
 typedef float f32;
 typedef double f64;
+
+#if _DEBUG
+#define Assert(Expression) if (!(Expression)) { *(int*)0 = 0; }
+#else
+#define Assert(Expression)
+#endif
+
+#define Kilobytes(value) (((uint64)value) * 1024)
+#define Megabytes(value) (Kilobytes((uint64)value) * 1024)
+#define Gigabytes(value) (Megabytes((uint64)value) * 1024)
+#define Terabytes(value) (Gigabytes((uint64)value) * 1024)
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
@@ -88,18 +95,28 @@ struct game_controller_input
 
 struct game_input
 {
+
+	// TODO: Insert clock values here.
 	game_controller_input Controllers[4];
 };
 
 struct game_memory
 {
 	bool32 IsInitialized;
+	
 	uint64 PermanentStorageSize;
 	void* PermanentStorage;
+
+	uint64 TransientStorageSize;
+	void* TransientStorage;
+};
+
+struct game_clocks
+{
+	f32 SecondsElapsed;
 };
 
 void GameUpdateAndRender(game_memory* memory, game_input* input,  game_offscreen_buffer* buffer, game_sound_buffer* soundBuffer);
-
 
 struct game_state
 {
@@ -107,4 +124,5 @@ struct game_state
 	int BlueOffset;
 	int GreenOffset;
 };
+
 #endif // !HANDMANDE_H
