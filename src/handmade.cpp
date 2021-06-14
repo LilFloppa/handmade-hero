@@ -46,8 +46,17 @@ void GameUpdateAndRender(game_memory* memory, game_input* input, game_offscreen_
 	Assert(sizeof(game_state) <= memory->PermanentStorageSize);
 
 	game_state* gameState = (game_state*)memory->PermanentStorage;
-	if (memory->IsInitialized)
+	if (!memory->IsInitialized)
 	{
+		const char* filename = __FILE__;
+		debug_read_file_result file = DEBUGPlatformReadEntireFile(filename);
+
+		if (file.Content)
+		{
+			DEBUGPlatformWriteEntireFile("test.out", file.ContentSize, file.Content);
+			DEBUGPlatformFreeFileMemory(file.Content);
+		}
+
 		gameState->ToneHz = 256;
 		gameState->GreenOffset = 0;
 		gameState->BlueOffset = 0;

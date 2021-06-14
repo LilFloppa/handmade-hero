@@ -15,7 +15,7 @@
 	- Blit speed improvements (BitBlt)
 	- Hardware acceleration (OpenGL or Direct3D or BOTH???)
 	- GetKeyboardLayout (for French keyboards, international WASD support)
-	
+
 	Just a partial list of stuff!!!
 */
 
@@ -122,7 +122,7 @@ internal void Win32InitDSound(HWND window, int32 samplesPerSecond, int32 bufferS
 
 			// NOTE(nikita): Create a secondary buffer
 			DSBUFFERDESC bufferDescription = {};
-			bufferDescription.dwSize = sizeof(bufferDescription); 
+			bufferDescription.dwSize = sizeof(bufferDescription);
 			bufferDescription.dwFlags = 0;
 			bufferDescription.dwBufferBytes = bufferSize;
 			bufferDescription.lpwfxFormat = &waveFormat;
@@ -354,6 +354,89 @@ internal void Win32ProcessXInputDigitalButton(DWORD xInputButtonState, game_butt
 	newState->HalfTransitionCount = (oldState->EndedDown != newState->EndedDown) ? 1 : 0;
 }
 
+debug_read_file_result DEBUGPlatformReadEntireFile(const char* filename)
+{
+	debug_read_file_result result = {};
+	HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+
+	if (fileHandle != INVALID_HANDLE_VALUE)
+	{
+		LARGE_INTEGER fileSize;
+		if (GetFileSizeEx(fileHandle, &fileSize))
+		{
+			uint32 fileSize32 = SafeTruncateSize32(fileSize.QuadPart);
+			result.Content = VirtualAlloc(0, fileSize.QuadPart, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+			if (result.Content)
+			{
+				DWORD bytesRead;
+				if (ReadFile(fileHandle, result.Content, fileSize32, &bytesRead, 0) && (fileSize32 == bytesRead))
+				{
+					// NOTE: File read successfully
+					result.ContentSize = fileSize32;
+				}
+				else
+				{
+					// TODO: Logging
+					DEBUGPlatformFreeFileMemory(result.Content);
+					result.Content = 0;
+				}
+			}
+			else
+			{
+				// TODO: Logging
+			}
+		}
+		else
+		{
+			// TODO: Logging
+		}
+
+		CloseHandle(fileHandle);
+	}
+	else
+	{
+		// TODO: Logging
+	}
+
+	return result;
+}
+
+void DEBUGPlatformFreeFileMemory(void* memory)
+{
+	if (memory)
+	{
+		VirtualFree(memory, 0, MEM_RELEASE);
+	}
+}
+
+bool32 DEBUGPlatformWriteEntireFile(const char* filename, uint32 memorySize, void* memory)
+{
+	bool32 result = false;
+	HANDLE fileHandle = CreateFileA(filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+
+	if (fileHandle != INVALID_HANDLE_VALUE)
+	{
+		DWORD bytesWritten;
+		if (WriteFile(fileHandle, memory, memorySize, &bytesWritten, 0))
+		{
+			// NOTE: File written successfully
+			result = bytesWritten = memorySize;
+		}
+		else
+		{
+			// TODO: Logging
+		}
+
+		CloseHandle(fileHandle);
+	}
+	else
+	{
+		// TODO: Logging
+	}
+
+	return result;
+}
+
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, int showCode)
 {
 	Win32LoadXInput();
@@ -391,7 +474,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 	if (window == NULL)
 		return 0;
 
-	
+
 
 	ShowWindow(window, showCode);
 
@@ -427,7 +510,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 	GlobalRunning = true;
 	int xOffset = 0;
 	int yOffset = 0;
-	
+
 	MSG msg;
 
 	LARGE_INTEGER lastCounter;
@@ -529,7 +612,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prevInstance, PWSTR cmdArgs, i
 			SoundIsValid = true;
 		}
 
-		
+
 		game_sound_buffer soundBuffer = {};
 		soundBuffer.SamplesPerSecond = soundOutput.SamplesPerSecond;
 		soundBuffer.SamplesCount = bytesToWrite / soundOutput.BytesPerSample;

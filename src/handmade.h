@@ -37,9 +37,26 @@ typedef double f64;
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
+inline uint32 SafeTruncateSize32(uint64 value)
+{
+	Assert(value <= 0xFFFFFFFF);
+	uint32 result = (uint32)value;
+	return result;
+}
 // NOTE: Services that the platform layer provides to the game
 
 
+#if _DEBUG
+struct debug_read_file_result
+{
+	uint32 ContentSize;
+	void* Content;
+};
+
+debug_read_file_result DEBUGPlatformReadEntireFile(const char* filename);
+void DEBUGPlatformFreeFileMemory(void* memory);
+bool32 DEBUGPlatformWriteEntireFile(const char* filename, uint32 memorySize, void* memory);
+#endif
 // NOTE: Services that the game provides to the platform layer
 
 struct game_offscreen_buffer
