@@ -82,40 +82,47 @@ struct game_button_state
 
 struct game_controller_input
 {
+	bool32 IsConnected;
 	bool32 IsAnalog;
+	f32 StickAverageX;
+	f32 StickAverageY;
 
-	f32 StartX;
-	f32 StartY;
-
-	f32 MinX;
-	f32 MinY;
-
-	f32 MaxX;
-	f32 MaxY;
-
-	f32 EndX;
-	f32 EndY;
 	union
 	{
-		game_button_state Buttons[6];
+		game_button_state Buttons[10];
 		struct
 		{
-			game_button_state Up;
-			game_button_state Down;
-			game_button_state Left;
-			game_button_state Right;
+			game_button_state MoveUp;
+			game_button_state MoveDown;
+			game_button_state MoveLeft;
+			game_button_state MoveRight;
+
+			game_button_state ActionUp;
+			game_button_state ActionDown;
+			game_button_state ActionLeft;
+			game_button_state ActionRight;
+
 			game_button_state LeftShoulder;
 			game_button_state RightShoulder;
+
+			game_button_state Back;
+			game_button_state Start;
 		};
 	};
 };
 
 struct game_input
 {
-
 	// TODO: Insert clock values here.
-	game_controller_input Controllers[4];
+	game_controller_input Controllers[5];
 };
+
+inline game_controller_input* GetControllers(game_input* input, int controllerIndex)
+{
+	Assert(controllerIndex < ArrayCount(input->Controllers));
+	game_controller_input* result = &input->Controllers[controllerIndex];
+	return result;
+}
 
 struct game_memory
 {
@@ -133,7 +140,7 @@ struct game_clocks
 	f32 SecondsElapsed;
 };
 
-void GameUpdateAndRender(game_memory* memory, game_input* input,  game_offscreen_buffer* buffer, game_sound_buffer* soundBuffer);
+void GameUpdateAndRender(game_memory* memory, game_input* input, game_offscreen_buffer* buffer, game_sound_buffer* soundBuffer);
 
 struct game_state
 {
