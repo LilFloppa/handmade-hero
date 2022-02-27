@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32002.261
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "handmade-hero", "handmade-hero\handmade-hero.vcxproj", "{C237F94F-5268-4E3A-A8A0-3A27D1948492}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "handmade-dll", "handmade-dll\handmade-dll.vcxproj", "{0BD05D87-3977-4C25-A60B-2DA479D7FE23}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C237F94F-5268-4E3A-A8A0-3A27D1948492}.Debug|x64.ActiveCfg = Debug|x64
+		{C237F94F-5268-4E3A-A8A0-3A27D1948492}.Debug|x64.Build.0 = Debug|x64
+		{C237F94F-5268-4E3A-A8A0-3A27D1948492}.Release|x64.ActiveCfg = Release|x64
+		{C237F94F-5268-4E3A-A8A0-3A27D1948492}.Release|x64.Build.0 = Release|x64
+		{0BD05D87-3977-4C25-A60B-2DA479D7FE23}.Debug|x64.ActiveCfg = Debug|x64
+		{0BD05D87-3977-4C25-A60B-2DA479D7FE23}.Debug|x64.Build.0 = Debug|x64
+		{0BD05D87-3977-4C25-A60B-2DA479D7FE23}.Release|x64.ActiveCfg = Release|x64
+		{0BD05D87-3977-4C25-A60B-2DA479D7FE23}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5A9FEB28-A666-4586-AE85-B1B2F9A9E202}
+	EndGlobalSection
+EndGlobal
