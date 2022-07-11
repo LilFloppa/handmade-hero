@@ -42,27 +42,43 @@ void RenderWeirdGradient(game_offscreen_buffer* Buffer, int BlueOffset, int Gree
     }
 }
 
-void RenderMouse(game_offscreen_buffer* Buffer, int32 MouseX, int32 MouseY)
+internal int32 RoundReal32ToInt32(real32 Real32)
 {
-    uint8* EndOfBuffer = 
-        (uint8*)Buffer->Memory + 
-        Buffer->BytesPerPixel * Buffer->Width * Buffer->Height;
+    int32 Result = (int32)(Real32 + 0.5f);
+    // TODO(casey): Intrinsic????
+    return Result;
+}
 
-    uint32 Color = 0xFFFFFFFF;
-    int32 Top = MouseY;
-    int32 Bottom = MouseY + 10;
+internal void DrawRectangle(game_offscreen_buffer* Buffer, real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY, uint32 Color)
+{
+    // TODO(casey): Floating point color tomorrow!!!!!!
 
-    for (int32 X = MouseX; X < MouseX + 10; X++)
+    int32 MinX = RoundReal32ToInt32(RealMinX);
+    int32 MinY = RoundReal32ToInt32(RealMinY);
+    int32 MaxX = RoundReal32ToInt32(RealMaxX);
+    int32 MaxY = RoundReal32ToInt32(RealMaxY);
+
+    if (MinX < 0)
+        MinX = 0;
+    if (MinY < 0)
+        MinY = 0;
+
+    if (MaxX > Buffer->Width)
+        MaxX = Buffer->Width;
+
+    if (MaxY > Buffer->Height)
+        MaxY = Buffer->Height;
+
+    uint8* Row = ((uint8*)Buffer->Memory + MinX * Buffer->BytesPerPixel + MinY * Buffer->Pitch);
+    for (int Y = MinY; Y < MaxY; Y++)
     {
-        uint8* Pixel = ((uint8*)Buffer->Memory + X * Buffer->BytesPerPixel + Top * Buffer->Pitch);
-        for (int Y = Top; Y < Bottom; Y++)
+        uint32* Pixel = (uint32*)Row;
+        for (int X = MinX; X < MaxX; X++)
         {
-            if ((Pixel >= Buffer->Memory) && (Pixel < EndOfBuffer))
-            {
-                *(uint32*)Pixel = Color;
-                Pixel += Buffer->Pitch;
-            }
+            *Pixel++ = Color;
         }
+
+        Row += Buffer->Pitch;
     }
 }
 
@@ -124,15 +140,8 @@ extern "C" __declspec(dllexport) GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     RenderWeirdGradient(Buffer, GameState->BlueOffset, GameState->GreenOffset);
 
-    RenderMouse(Buffer, Input->MouseX, Input->MouseY);
-
-    for (int ButtonIndex = 0; ButtonIndex < ArrayCount(Input->MouseButtons); ++ButtonIndex)
-    {
-        if (Input->MouseButtons[ButtonIndex].EndedDown)
-        {
-            RenderMouse(Buffer, 10 + 20 * ButtonIndex, 10);
-        }
-    }
+    DrawRectangle(Buffer, 0.0f, 0.0f, Buffer->Width, Buffer->Height, 0x00FF00FF);
+    DrawRectangle(Buffer, 10.0f, 10.0f, 30.0f, 30.0f, 0x0000FFFF);
 }
 
 extern "C" __declspec(dllexport) GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)

@@ -1,9 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.32002.261
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32616.157
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "handmade-hero", "handmade-hero\handmade-hero.vcxproj", "{C237F94F-5268-4E3A-A8A0-3A27D1948492}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0BD05D87-3977-4C25-A60B-2DA479D7FE23} = {0BD05D87-3977-4C25-A60B-2DA479D7FE23}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "handmade-dll", "handmade-dll\handmade-dll.vcxproj", "{0BD05D87-3977-4C25-A60B-2DA479D7FE23}"
 EndProject
