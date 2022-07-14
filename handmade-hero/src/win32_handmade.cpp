@@ -888,6 +888,8 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLi
                 win32_game_code Game = Win32LoadGameCode(SourceDLLName);
                 while (GlobalRunning)
                 {
+                    NewInput->dtForFrame = TargetSecondsPerFrame;
+
                     FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);
                     if (CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime) != 0)
                     {
