@@ -203,6 +203,7 @@ struct tile_map
 struct world
 {
     real32 TileSideInMeters;
+    int32 TileSideInPixels;
 
     uint32 TileCountX;
     uint32 TileCountY;
@@ -227,8 +228,8 @@ struct canonical_position
     int32 TileY;
 
     // NOTE: This is tile-relative X and Y
-    real32 X;
-    real32 Y;
+    real32 TileRelX;
+    real32 TileRelY;
 };
 
 struct raw_position
