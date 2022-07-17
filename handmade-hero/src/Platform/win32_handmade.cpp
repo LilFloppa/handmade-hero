@@ -325,6 +325,9 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer* Buffer, int Width, i
 internal void Win32DisplayBufferInWindow(
 	win32_offscreen_buffer* Buffer, HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
+
+	PatBlt(DeviceContext, 0, Buffer->Height, WindowWidth, WindowHeight, BLACKNESS);
+	PatBlt(DeviceContext, Buffer->Width, 0, WindowWidth, WindowHeight, BLACKNESS);
 	// TODO(casey): Aspect ratio correction
 	// TODO(casey): Play with stretch modes
 	StretchDIBits(DeviceContext,

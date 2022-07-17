@@ -188,8 +188,57 @@ GAME_GET_SOUND_SAMPLES(GameGetSoundSamples);
 
 struct game_state
 {
+    int32 PlayerTileMapX;
+    int32 PlayerTileMapY;
+
     real32 PlayerX;
     real32 PlayerY;
+};
+
+struct tile_map
+{
+    uint32* Tiles;
+};
+
+struct world
+{
+    real32 TileSideInMeters;
+
+    uint32 TileCountX;
+    uint32 TileCountY;
+
+    real32 UpperLeftX;
+    real32 UpperLeftY;
+    real32 TileWidth;
+    real32 TileHeight;
+
+    int32 TileMapCountX;
+    int32 TileMapCountY;
+
+    tile_map* TileMaps;
+};
+
+struct canonical_position
+{
+    int32 TileMapX;
+    int32 TileMapY;
+
+    int32 TileX;
+    int32 TileY;
+
+    // NOTE: This is tile-relative X and Y
+    real32 X;
+    real32 Y;
+};
+
+struct raw_position
+{
+    int32 TileMapX;
+    int32 TileMapY;
+
+    // NOTE: Tile-map relative X and Y
+    real32 X;
+    real32 Y;
 };
 
 #define HANDMADE_H

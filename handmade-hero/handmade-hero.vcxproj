@@ -151,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Game\handmade.h" />
+    <ClInclude Include="src\Game\handmade_intrinsics.h" />
     <ClInclude Include="src\Platform\win32_handmade.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
