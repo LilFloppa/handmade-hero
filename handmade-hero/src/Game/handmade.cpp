@@ -1,38 +1,22 @@
 #include "handmade.h"
 
-void GameOutputSound(game_state* GameState, game_sound_output_buffer* SoundBuffer, int ToneHz)
-{
-    int16 ToneVolume = 3000;
-    int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
-
-    int16* SampleOut = SoundBuffer->Samples;
-    for (int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; SampleIndex++)
-    {
-        // TODO(casey): Draw this out for people
-        real32 SineValue = sinf(GameState->tSine);
-        int16 SampleValue = (int16)(SineValue * ToneVolume);
-        *SampleOut++ = SampleValue;
-        *SampleOut++ = SampleValue;
-
-        GameState->tSine += 2.0f * Pi32 * 1.0f / (real32)WavePeriod;
-        if (GameState->tSine > 2.0f * Pi32)
-        {
-            GameState->tSine -= 2.0f * Pi32;
-        }
-    }
-}
-
-internal int32 RoundReal32ToInt32(real32 Real32)
+inline int32 RoundReal32ToInt32(real32 Real32)
 {
     int32 Result = (int32)(Real32 + 0.5f);
     // TODO(casey): Intrinsic????
     return Result;
 }
 
-internal uint32 RoundReal32ToUint32(real32 Real32)
+inline uint32 RoundReal32ToUint32(real32 Real32)
 {
     uint32 Result = (uint32)(Real32 + 0.5f);
     // TODO(casey): Intrinsic????
+    return Result;
+}
+
+inline int32 TruncateReal32ToInt32(real32 Real32)
+{
+    int32 Result = (int32)(Real32);
     return Result;
 }
 
@@ -77,49 +61,27 @@ internal void DrawRectangle(game_offscreen_buffer* Buffer,
     }
 }
 
-extern "C" __declspec(dllexport) GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
+GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) == (ArrayCount(Input->Controllers[0].Buttons)));
     Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
 
     game_state* GameState = (game_state*)Memory->PermanentStorage;
     if (!Memory->IsInitialized)
-        Memory->IsInitialized = true;
-
-    for (int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ControllerIndex++)
     {
-        game_controller_input* Controller = GetController(Input, ControllerIndex);
-        if (Controller->IsAnalog)
-        {
-        }
-        else
-        {
-            real32 dPlayerX = 0.0f;
-            real32 dPlayerY = 0.0f;
-            if (Controller->MoveUp.EndedDown)
-            {
-                dPlayerY = -1.0f;
-            }
-            if (Controller->MoveDown.EndedDown)
-            {
-                dPlayerY = 1.0f;
-            }
-            if (Controller->MoveLeft.EndedDown)
-            {
-                dPlayerX = -1.0f;
-            }
-            if (Controller->MoveRight.EndedDown)
-            {
-                dPlayerX = 1.0f;
-            }
-
-            GameState->PlayerX += Input->dtForFrame * dPlayerX * 128.0f;
-            GameState->PlayerY += Input->dtForFrame * dPlayerY * 128.0f;
-            break;
-        }
+        GameState->PlayerX = 200;
+        GameState->PlayerY = 200;
+        Memory->IsInitialized = true;
     }
 
-    uint32 TileMap[9][16] =
+#define TILEMAP_COUNT_X 16
+#define TILEMAP_COUNT_Y 9
+    real32 UpperLeftX = 0.0f;
+    real32 UpperLeftY = 0.0f;
+    real32 TileWidth = 75.0f;
+    real32 TileHeight = 75.0f;
+
+    uint32 TileMap[TILEMAP_COUNT_Y][TILEMAP_COUNT_X] =
     {
         {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1},
         {1, 1, 0, 0,  0, 0, 0, 1,  1, 1, 0, 1,  0, 0, 0, 1},
@@ -132,11 +94,45 @@ extern "C" __declspec(dllexport) GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1},
     };
 
-    real32 UpperLeftX = 0.0f;
-    real32 UpperLeftY = 0.0f;
-    real32 TileWidth =  75.0f;
-    real32 TileHeight = 75.0f;
-    DrawRectangle(Buffer, 0.0f, 0.0f, Buffer->Width, Buffer->Height, 1.0f, 0.0f, 0.1f);
+    for (int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ControllerIndex++)
+    {
+        game_controller_input* Controller = GetController(Input, ControllerIndex);
+        if (Controller->IsAnalog)
+        {
+        }
+        else
+        {
+            real32 dPlayerX = 0.0f;
+            real32 dPlayerY = 0.0f;
+            if (Controller->MoveUp.EndedDown)
+                dPlayerY = -1.0f;
+            if (Controller->MoveDown.EndedDown)
+                dPlayerY = 1.0f;
+            if (Controller->MoveLeft.EndedDown)
+                dPlayerX = -1.0f;
+            if (Controller->MoveRight.EndedDown)
+                dPlayerX = 1.0f;
+
+            real32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX * 128.0f;
+            real32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY * 128.0f;
+
+            int32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);
+            int32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);
+
+            bool32 IsValid = false;
+            if (PlayerTileX >= 0 && PlayerTileX < TILEMAP_COUNT_X && PlayerTileY >= 0 && PlayerTileY < TILEMAP_COUNT_Y)
+            {
+                uint32 TileMapValue = TileMap[PlayerTileY][PlayerTileX];
+                IsValid = (TileMapValue == 0);
+            }
+
+            if (IsValid)
+            {
+                GameState->PlayerX = NewPlayerX;
+                GameState->PlayerY = NewPlayerY;
+            }
+        }
+    }
 
     for (int Row = 0; Row < 9; Row++)
     {
@@ -166,8 +162,6 @@ extern "C" __declspec(dllexport) GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawRectangle(Buffer, PlayerLeft, PlayerTop, PlayerLeft + PlayerWidth, PlayerTop + PlayerHeight, PlayerR, PlayerG, PlayerB);
 }
 
-extern "C" __declspec(dllexport) GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
+GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
-    game_state* GameState = (game_state*)Memory->PermanentStorage;
-   // GameOutputSound(GameState, SoundBuffer, 512);
 }

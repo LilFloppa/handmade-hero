@@ -38,7 +38,7 @@ typedef double real64;
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
    // TODO(casey): swap, min, max ... macros???
 
-inline uint32 SafeTruncateUInt64(uint64 Value)
+inline uint32 SafeTruncateUint64(uint64 Value)
 {
     // TODO(casey): Defines for maximum values
     Assert(Value <= 0xFFFFFFFF);
@@ -176,6 +176,7 @@ struct game_memory
 
 #define GAME_UPDATE_AND_RENDER(name) void name(thread_context* Context, game_memory* Memory, game_input* Input, game_offscreen_buffer* Buffer)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+GAME_UPDATE_AND_RENDER(GameUpdateAndRender);
 
 // NOTE(casey): At the moment, this has to be a very fast function, it cannot be
 // more than a millisecond or so.
@@ -183,13 +184,12 @@ typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 // or asking about it, etc.
 #define GAME_GET_SOUND_SAMPLES(name) void name(thread_context* Context, game_memory* Memory, game_sound_output_buffer* SoundBuffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
+GAME_GET_SOUND_SAMPLES(GameGetSoundSamples);
 
 struct game_state
 {
     real32 PlayerX;
     real32 PlayerY;
-
-    real32 tSine;
 };
 
 #define HANDMADE_H

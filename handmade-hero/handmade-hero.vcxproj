@@ -146,10 +146,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\win32_handmade.cpp" />
+    <ClCompile Include="src\Game\handmade.cpp" />
+    <ClCompile Include="src\Platform\win32_handmade.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\win32_handmade.h" />
+    <ClInclude Include="src\Game\handmade.h" />
+    <ClInclude Include="src\Platform\win32_handmade.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
