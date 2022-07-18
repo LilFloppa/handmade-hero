@@ -2,16 +2,20 @@
 
 #include "handmade.h"
 
+#include <math.h>
+
+// TODO: HOW TO IMPLEMENT THESE MATH FUNCTIONS!!!
+
 inline int32 RoundReal32ToInt32(real32 Real32)
 {
-    int32 Result = (int32)(Real32 + 0.5f);
+    int32 Result = (int32)roundf(Real32);
     // TODO(casey): Intrinsic????
     return Result;
 }
 
 inline uint32 RoundReal32ToUInt32(real32 Real32)
 {
-    uint32 Result = (uint32)(Real32 + 0.5f);
+    uint32 Result = (uint32)roundf(Real32);
     // TODO(casey): Intrinsic????
     return Result;
 }
@@ -26,8 +30,6 @@ inline uint32 AbsoluteInt32ToUInt32(int32 Int32)
 {
 
 }
-// TODO: HOW TO IMPLEMENT THESE MATH FUNCTIONS!!!
-#include <math.h>
 inline int32 FloorReal32ToInt32(real32 Real32)
 {
     int32 Result = (int32)floorf(Real32);

@@ -209,6 +209,8 @@ struct world
 
 struct world_position
 {
+    // NOTE: These are fixes point tile locations. The high bits are the tile chunk index,
+    // and the low bits are the tile index in the chunk.
     int32 AbsTileX;
     int32 AbsTileY;
 

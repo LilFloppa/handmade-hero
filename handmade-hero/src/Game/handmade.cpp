@@ -224,10 +224,17 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 1.0f, 0.0f, 0.1f);
 
-    for (uint32 Row = 0; Row < World.ChunkDim; Row++)
+    real32 CenterX = 0.5f * (real32)Buffer->Width;
+    real32 CenterY = 0.5f * (real32)Buffer->Height;
+
+    int32 Offset = 10;
+    for (int32 RelRow = -Offset; RelRow < Offset; RelRow++)
     {
-        for (uint32 Column = 0; Column < World.ChunkDim; Column++)
+        for (int32 RelColumn = -2 * Offset; RelColumn < 2 * Offset; RelColumn++)
         {
+            uint32 Column = RelColumn + GameState->PlayerPos.AbsTileX;
+            uint32 Row = RelRow + GameState->PlayerPos.AbsTileY;
+
             uint32 TileID = GetTileValue(&World, Column, Row);
             real32 Gray = 0.5f;
             if (TileID == 1)
@@ -236,8 +243,8 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             if (Column == GameState->PlayerPos.AbsTileX && Row == GameState->PlayerPos.AbsTileY)
                 Gray = 0.0f;
 
-            real32 MinX = LowerLeftX + ((real32)Column) * World.TileSideInPixels;
-            real32 MinY = LowerLeftY - ((real32)Row) * World.TileSideInPixels;
+            real32 MinX = CenterX - World.MetersToPixels * GameState->PlayerPos.TileRelX + ((real32)RelColumn) * World.TileSideInPixels;
+            real32 MinY = CenterY + World.MetersToPixels * GameState->PlayerPos.TileRelY - ((real32)RelRow) * World.TileSideInPixels;
             real32 MaxX = MinX + World.TileSideInPixels;
             real32 MaxY = MinY - World.TileSideInPixels;
 
@@ -249,10 +256,8 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 PlayerG = 1.0f;
     real32 PlayerB = 0.0f;
 
-    real32 PlayerLeft = LowerLeftX + GameState->PlayerPos.AbsTileX * World.TileSideInPixels +
-        World.MetersToPixels * GameState->PlayerPos.TileRelX - 0.5f * World.MetersToPixels * PlayerWidth;
-    real32 PlayerTop = LowerLeftY - GameState->PlayerPos.AbsTileY * World.TileSideInPixels -
-        World.MetersToPixels * GameState->PlayerPos.TileRelY - World.MetersToPixels * PlayerHeight;
+    real32 PlayerLeft = CenterX - 0.5f * World.MetersToPixels * PlayerWidth;
+    real32 PlayerTop = CenterY - World.MetersToPixels * PlayerHeight;
 
     DrawRectangle(Buffer, 
         PlayerLeft, 
