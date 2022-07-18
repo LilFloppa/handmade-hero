@@ -92,7 +92,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
 				else
 				{
 					// TODO(casey): Logging
-					DEBUGPlatformFreeFileMemory(Context, Result.Contents);
+					DEBUGPlatformFreeFileMemory(Thread, Result.Contents);
 					Result.Contents = 0;
 				}
 			}

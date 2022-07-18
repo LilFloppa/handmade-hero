@@ -1,8 +1,8 @@
 #ifndef HANDMADE_INTRINSICS_H
 
-#include "handmade.h"
-
 #include <math.h>
+
+#include "handmade_platform.h"
 
 // TODO: HOW TO IMPLEMENT THESE MATH FUNCTIONS!!!
 

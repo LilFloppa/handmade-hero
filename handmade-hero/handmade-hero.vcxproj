@@ -147,11 +147,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Game\handmade.cpp" />
+    <ClCompile Include="src\Game\handmade_tile.cpp" />
     <ClCompile Include="src\Platform\win32_handmade.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Game\handmade.h" />
     <ClInclude Include="src\Game\handmade_intrinsics.h" />
+    <ClInclude Include="src\Game\handmade_platform.h" />
+    <ClInclude Include="src\Game\handmade_tile.h" />
     <ClInclude Include="src\Platform\win32_handmade.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
