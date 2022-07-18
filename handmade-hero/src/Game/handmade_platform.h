@@ -33,7 +33,7 @@ typedef struct thread_context
 /*
   NOTE(casey): Services that the platform layer provides to the game
 */
-#if HANDMADE_INTERNAL
+#if 1
 /* IMPORTANT(casey):
 
    These are NOT for doing anything in the shipping game - they are

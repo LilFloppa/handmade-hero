@@ -139,7 +139,7 @@
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -154,6 +154,7 @@
     <ClInclude Include="src\Game\handmade.h" />
     <ClInclude Include="src\Game\handmade_intrinsics.h" />
     <ClInclude Include="src\Game\handmade_platform.h" />
+    <ClInclude Include="src\Game\handmade_random.h" />
     <ClInclude Include="src\Game\handmade_tile.h" />
     <ClInclude Include="src\Platform\win32_handmade.h" />
   </ItemGroup>
