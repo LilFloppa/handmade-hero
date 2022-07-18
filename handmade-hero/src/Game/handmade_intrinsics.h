@@ -9,7 +9,7 @@ inline int32 RoundReal32ToInt32(real32 Real32)
     return Result;
 }
 
-inline uint32 RoundReal32ToUint32(real32 Real32)
+inline uint32 RoundReal32ToUInt32(real32 Real32)
 {
     uint32 Result = (uint32)(Real32 + 0.5f);
     // TODO(casey): Intrinsic????
@@ -22,6 +22,10 @@ inline int32 TruncateReal32ToInt32(real32 Real32)
     return Result;
 }
 
+inline uint32 AbsoluteInt32ToUInt32(int32 Int32)
+{
+
+}
 // TODO: HOW TO IMPLEMENT THESE MATH FUNCTIONS!!!
 #include <math.h>
 inline int32 FloorReal32ToInt32(real32 Real32)

@@ -186,60 +186,48 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender);
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 GAME_GET_SOUND_SAMPLES(GameGetSoundSamples);
 
-struct game_state
-{
-    int32 PlayerTileMapX;
-    int32 PlayerTileMapY;
-
-    real32 PlayerX;
-    real32 PlayerY;
-};
-
-struct tile_map
+struct tile_chunk
 {
     uint32* Tiles;
 };
 
 struct world
 {
+    uint32 ChunkShift;
+    uint32 ChunkMask;
+    uint32 ChunkDim;
+
     real32 TileSideInMeters;
     int32 TileSideInPixels;
+    real32 MetersToPixels;
 
-    uint32 TileCountX;
-    uint32 TileCountY;
+    int32 TileChunkCountX;
+    int32 TileChunkCountY;
 
-    real32 UpperLeftX;
-    real32 UpperLeftY;
-    real32 TileWidth;
-    real32 TileHeight;
-
-    int32 TileMapCountX;
-    int32 TileMapCountY;
-
-    tile_map* TileMaps;
+    tile_chunk* TileChunks;
 };
 
-struct canonical_position
+struct world_position
 {
-    int32 TileMapX;
-    int32 TileMapY;
+    int32 AbsTileX;
+    int32 AbsTileY;
 
-    int32 TileX;
-    int32 TileY;
-
-    // NOTE: This is tile-relative X and Y
     real32 TileRelX;
     real32 TileRelY;
 };
 
-struct raw_position
+struct tile_chunk_position
 {
-    int32 TileMapX;
-    int32 TileMapY;
+    uint32 TileChunkX;
+    uint32 TileChunkY;
 
-    // NOTE: Tile-map relative X and Y
-    real32 X;
-    real32 Y;
+    uint32 RelTileX;
+    uint32 RelTileY;
+};
+
+struct game_state
+{
+    world_position PlayerPos;
 };
 
 #define HANDMADE_H
