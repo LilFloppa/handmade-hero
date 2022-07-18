@@ -8,8 +8,9 @@ struct tile_map_position
     int32 AbsTileY;
     int32 AbsTileZ;
 
-    real32 TileRelX;
-    real32 TileRelY;
+    // NOTE: These are the offsets from the tile center
+    real32 OffsetX;
+    real32 OffsetY;
 };
 
 struct tile_chunk

@@ -45,6 +45,36 @@ internal void DrawRectangle(game_offscreen_buffer* Buffer,
 	}
 }
 
+#pragma pack(push, 1)
+struct bitmap_header
+{
+	uint16 FileType;
+	uint32 FileSize;
+	uint16 Reserved1;
+	uint16 Reserved2;
+	uint32 BitmapOffset;
+	uint32 Size;
+	int32 Width;
+	int32 Height;
+	uint16 Planes;
+	uint16 BitsPerPixel;
+};
+#pragma pack(pop)
+
+internal uint32* DEBUGLoadBMP(thread_context* Thread, debug_platform_read_entire_file* ReadEntireFile, char* FileName)
+{
+	uint32* Result = 0;
+	debug_read_file_result ReadResult = ReadEntireFile(Thread, FileName);
+	if (ReadResult.ContentsSize != 0)
+	{
+		bitmap_header* Header = (bitmap_header*)ReadResult.Contents;
+		uint32* Pixels = (uint32 *)((uint8*)ReadResult.Contents + Header->BitmapOffset);
+		Result = Pixels;
+	}
+
+	return Result;
+}
+
 GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
 	Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) == (ArrayCount(Input->Controllers[0].Buttons)));
@@ -59,10 +89,11 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	game_state* GameState = (game_state*)Memory->PermanentStorage;
 	if (!Memory->IsInitialized)
 	{
+		GameState->PixelPointer = DEBUGLoadBMP(NULL, Memory->DEBUGPlatformReadEntireFile, (char*)"C:/repos/handmade-hero/assets/test/test_background.bmp");
 		GameState->PlayerPos.AbsTileX = 3;
 		GameState->PlayerPos.AbsTileY = 4;
-		GameState->PlayerPos.TileRelX = 0.0f;
-		GameState->PlayerPos.TileRelY = 0.0f;
+		GameState->PlayerPos.OffsetX = 0.0f;
+		GameState->PlayerPos.OffsetY = 0.0f;
 		InitializeArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state), (uint8*)Memory->PermanentStorage + sizeof(game_state));
 
 		GameState->World = PushStruct(&GameState->WorldArena, world);
@@ -115,8 +146,10 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 				RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
 			}
 
+			bool32 CreatedZDoor = false;
 			if (RandomChoice == 2)
 			{
+				CreatedZDoor = true;
 				if (AbsTileZ == 0)
 				{
 					DoorUp = true;
@@ -171,15 +204,11 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
 			DoorLeft = DoorRight;
 			DoorBottom = DoorTop;
-			if (DoorUp)
+
+			if (CreatedZDoor)
 			{
-				DoorDown = true;
-				DoorUp = false;
-			}
-			else if (DoorDown)
-			{
-				DoorUp = true;
-				DoorDown = false;
+				DoorDown = !DoorDown;
+				DoorUp = !DoorUp;
 			}
 			else
 			{
@@ -242,15 +271,15 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 			dPlayerY *= PlayerSpeed;
 
 			tile_map_position NewPlayerPos = GameState->PlayerPos;
-			NewPlayerPos.TileRelX += Input->dtForFrame * dPlayerX;
-			NewPlayerPos.TileRelY += Input->dtForFrame * dPlayerY;
+			NewPlayerPos.OffsetX += Input->dtForFrame * dPlayerX;
+			NewPlayerPos.OffsetY += Input->dtForFrame * dPlayerY;
 			NewPlayerPos = RecanonicalizePosition(TileMap, NewPlayerPos);
 
 			tile_map_position PlayerLeft = NewPlayerPos;
-			PlayerLeft.TileRelX -= 0.5f * PlayerWidth;
+			PlayerLeft.OffsetX -= 0.5f * PlayerWidth;
 			PlayerLeft = RecanonicalizePosition(TileMap, PlayerLeft);
 			tile_map_position PlayerRight = NewPlayerPos;
-			PlayerRight.TileRelX += 0.5f * PlayerWidth;
+			PlayerRight.OffsetX += 0.5f * PlayerWidth;
 			PlayerRight = RecanonicalizePosition(TileMap, PlayerRight);
 
 
@@ -259,6 +288,18 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 				IsWorldPointEmpty(TileMap, PlayerLeft) &&
 				IsWorldPointEmpty(TileMap, PlayerRight))
 			{
+				if (!AreOnSameTile(&GameState->PlayerPos, &NewPlayerPos))
+				{
+					uint32 NewTileValue = GetTileValue(TileMap, NewPlayerPos.AbsTileX, NewPlayerPos.AbsTileY, NewPlayerPos.AbsTileZ);
+					if (NewTileValue == 3)
+					{
+						NewPlayerPos.AbsTileZ++;
+					}
+					else if (NewTileValue == 4)
+					{
+						NewPlayerPos.AbsTileZ--;
+					}
+				}
 				GameState->PlayerPos = NewPlayerPos;
 			}
 		}
@@ -278,7 +319,7 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 			uint32 Row = RelRow + GameState->PlayerPos.AbsTileY;
 
 			uint32 TileID = GetTileValue(TileMap, Column, Row, GameState->PlayerPos.AbsTileZ);
-			
+
 			if (TileID > 0)
 			{
 				real32 Gray = 0.5f;
@@ -291,8 +332,8 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 				if (TileID > 2)
 					Gray = 0.75;
 
-				real32 CenX = ScreenCenterX - MetersToPixels * GameState->PlayerPos.TileRelX + ((real32)RelColumn) * TileSideInPixels;
-				real32 CenY = ScreenCenterY + MetersToPixels * GameState->PlayerPos.TileRelY - ((real32)RelRow) * TileSideInPixels;
+				real32 CenX = ScreenCenterX - MetersToPixels * GameState->PlayerPos.OffsetX + ((real32)RelColumn) * TileSideInPixels;
+				real32 CenY = ScreenCenterY + MetersToPixels * GameState->PlayerPos.OffsetY - ((real32)RelRow) * TileSideInPixels;
 				real32 MinX = CenX - 0.5f * TileSideInPixels;
 				real32 MinY = CenY - 0.5f * TileSideInPixels;
 				real32 MaxX = CenX + 0.5f * TileSideInPixels;
@@ -316,6 +357,17 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 		PlayerLeft + PlayerWidth * MetersToPixels,
 		PlayerTop + PlayerHeight * MetersToPixels,
 		PlayerR, PlayerG, PlayerB);
+
+	uint32* Source = GameState->PixelPointer;
+	uint32* Dest = (uint32 *)Buffer->Memory;
+	int32 index = 0;
+	for (int32 Y = 0; Y < Buffer->Height; Y++)
+		for (int32 X = 0; X < Buffer->Width; X++)
+			if (index < 500000)
+			{
+				*Dest++ = *Source++;
+				index++;
+			}
 }
 
 GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)

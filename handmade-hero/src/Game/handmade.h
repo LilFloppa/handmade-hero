@@ -77,6 +77,7 @@ struct game_state
     world* World;
 
     tile_map_position PlayerPos;
+    uint32* PixelPointer;
 };
 
 #define HANDMADE_H
