@@ -723,7 +723,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLi
 
 	WNDCLASSA WindowClass = {};
 
-	Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+	Win32ResizeDIBSection(&GlobalBackbuffer, 1024, 576);
 
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	WindowClass.lpfnWndProc = Win32MainWindowCallback;
