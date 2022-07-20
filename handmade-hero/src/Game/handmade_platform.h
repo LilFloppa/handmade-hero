@@ -9,6 +9,37 @@
 
 #include <stdint.h>
 
+//
+// NOTE: Compilers
+//
+
+#ifndef COMPILER_MSVC
+#define COMPILER_MSVC 0
+#endif
+#ifndef COMPILER_LLVM
+#define COMPILER_LLVM 0
+#endif
+
+#if !COMPILER_MSVC && !COMPILER_LLVM
+#if _MSC_VER
+#undef COMPILER_MSVC
+#define COMPILER_MSVC 1
+#else
+// TODO: Moar compilerz!!!
+#undef COMPILER_LLVM
+#define COMPILER_LLVM 1
+#endif
+#endif
+
+#if COMPILER_MSVC
+#include <intrin.h>
+#pragma intrinsic(_BitScanForward)
+#endif
+
+//
+// NOTE: Types
+//
+
 typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
