@@ -6,15 +6,14 @@
   - Asset loading path
   - Threading (launch a thread)
   - Raw Input (support for multiple keyboards)
-  - Sleep/timeBeginPeriod
   - ClipCursor() (for multimonitor support)
   - Fullscreen support
-  - WM_SETCURSOR (control cursor visibility)
   - QueryCancelAutoplay
   - WM_ACTIVATEAPP (for when we are not the active application)
   - Blit speed improvements (BitBlt)
   - Hardware acceleration (OpenGL or Direct3D or BOTH??)
   - GetKeyboardLayout (for French keyboards, international WASD support)
+  - ChangeDisplaySettings option if we detect slow fullscreen blit???
 
   Just a partial list of stuff!!
 */
@@ -36,6 +35,37 @@ global_variable bool32 GlobalPause;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 global_variable int64 GlobalPerfCountFrequency;
+global_variable bool32 DEBUGGlobalShowCursor;
+global_variable WINDOWPLACEMENT GlobalWindowPosition = { sizeof(GlobalWindowPosition) };
+
+internal void ToggleFullscreen(HWND Window)
+{
+	// NOTE: This follows Raymond Chen's prescription
+	// for fullscreen toggling, see:
+	// http://blogs.msdn.com/b/oldnewthing/archive/2010/04/12/9994016.aspx
+	DWORD Style = GetWindowLong(Window, GWL_STYLE);
+	if (Style & WS_OVERLAPPEDWINDOW)
+	{
+		MONITORINFO MonitorInfo = { sizeof(MonitorInfo) };
+		if (GetWindowPlacement(Window, &GlobalWindowPosition) &&
+			GetMonitorInfo(MonitorFromWindow(Window, MONITOR_DEFAULTTOPRIMARY), &MonitorInfo))
+		{
+			SetWindowLong(Window, GWL_STYLE, Style & ~WS_OVERLAPPEDWINDOW);
+			SetWindowPos(Window, HWND_TOP,
+				MonitorInfo.rcMonitor.left, MonitorInfo.rcMonitor.top,
+				MonitorInfo.rcMonitor.right - MonitorInfo.rcMonitor.left,
+				MonitorInfo.rcMonitor.bottom - MonitorInfo.rcMonitor.top,
+				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		}
+	}
+	else
+	{
+		SetWindowLong(Window, GWL_STYLE, Style | WS_OVERLAPPEDWINDOW);
+		SetWindowPlacement(Window, &GlobalWindowPosition);
+		SetWindowPos(Window, 0, 0, 0, 0, 0,
+			SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+	}
+}
 
 // NOTE(casey): XInputGetState
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
@@ -325,21 +355,32 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer* Buffer, int Width, i
 internal void Win32DisplayBufferInWindow(
 	win32_offscreen_buffer* Buffer, HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
-
-	PatBlt(DeviceContext, 0, Buffer->Height, WindowWidth, WindowHeight, BLACKNESS);
-	PatBlt(DeviceContext, Buffer->Width, 0, WindowWidth, WindowHeight, BLACKNESS);
-	// TODO(casey): Aspect ratio correction
-	// TODO(casey): Play with stretch modes
-	StretchDIBits(DeviceContext,
-		/*
-		X, Y, Width, Height,
-		X, Y, Width, Height,
-		*/
-		0, 0, Buffer->Width, Buffer->Height,
-		0, 0, Buffer->Width, Buffer->Height,
-		Buffer->Memory,
-		&Buffer->Info,
-		DIB_RGB_COLORS, SRCCOPY);
+	if ((real32)WindowWidth >= (real32)Buffer->Width * 1.5f && (real32)WindowHeight >= (real32)Buffer->Height * 1.5f)
+	{
+		StretchDIBits(DeviceContext,
+			0, 0, WindowWidth, WindowHeight,
+			0, 0, Buffer->Width, Buffer->Height,
+			Buffer->Memory,
+			&Buffer->Info,
+			DIB_RGB_COLORS, SRCCOPY);
+	}
+	else
+	{
+		PatBlt(DeviceContext, 0, Buffer->Height, WindowWidth, WindowHeight, BLACKNESS);
+		PatBlt(DeviceContext, Buffer->Width, 0, WindowWidth, WindowHeight, BLACKNESS);
+		// TODO(casey): Aspect ratio correction
+		// TODO(casey): Play with stretch modes
+		StretchDIBits(DeviceContext,
+			/*
+			X, Y, Width, Height,
+			X, Y, Width, Height,
+			*/
+			0, 0, Buffer->Width, Buffer->Height,
+			0, 0, Buffer->Width, Buffer->Height,
+			Buffer->Memory,
+			&Buffer->Info,
+			DIB_RGB_COLORS, SRCCOPY);
+	}
 }
 
 internal LRESULT CALLBACK Win32MainWindowCallback(
@@ -353,6 +394,19 @@ internal LRESULT CALLBACK Win32MainWindowCallback(
 	{
 		// TODO(casey): Handle this with a message to the user?
 		GlobalRunning = false;
+	} break;
+
+	case WM_SETCURSOR:
+	{
+		if (DEBUGGlobalShowCursor)
+		{
+			Result = DefWindowProcA(Window, Message, WParam, LParam);
+		}
+		else
+		{
+			SetCursor(0);
+		}
+		// WindowClass.hCursor = LoadCursor(0, IDC_HAND);
 	} break;
 
 	case WM_ACTIVATEAPP:
@@ -379,8 +433,7 @@ internal LRESULT CALLBACK Win32MainWindowCallback(
 		PAINTSTRUCT Paint;
 		HDC DeviceContext = BeginPaint(Window, &Paint);
 		win32_window_dimension Dimension = Win32GetWindowDimension(Window);
-		Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
-			Dimension.Width, Dimension.Height);
+		Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
 		EndPaint(Window, &Paint);
 	} break;
 
@@ -578,13 +631,21 @@ internal void Win32ProcessPendingMessages(game_controller_input* KeyboardControl
 				{
 				}
 #endif
+				if (IsDown)
+				{
+					bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
+					if ((VKCode == VK_F4) && AltKeyWasDown)
+					{
+						GlobalRunning = false;
+					}
+					if (VKCode == VK_RETURN && AltKeyWasDown)
+					{
+						if (Message.hwnd)
+							ToggleFullscreen(Message.hwnd);
+					}
+				}
 			}
 
-			bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
-			if ((VKCode == VK_F4) && AltKeyWasDown)
-			{
-				GlobalRunning = false;
-			}
 		} break;
 
 		default:
@@ -721,6 +782,9 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLi
 
 	Win32LoadXInput();
 
+#if HANDMADE_INTERNAL
+	DEBUGGlobalShowCursor = true;
+#endif
 	WNDCLASSA WindowClass = {};
 
 	Win32ResizeDIBSection(&GlobalBackbuffer, 1024, 576);
@@ -728,7 +792,8 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLi
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	WindowClass.lpfnWndProc = Win32MainWindowCallback;
 	WindowClass.hInstance = Instance;
-	//    WindowClass.hIcon;
+	WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
+	// WindowClass.hIcon;
 	WindowClass.lpszClassName = "HandmadeHeroWindowClass";
 
 	if (RegisterClassA(&WindowClass))

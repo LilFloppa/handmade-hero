@@ -156,6 +156,7 @@
   <ItemGroup>
     <ClInclude Include="src\Game\handmade.h" />
     <ClInclude Include="src\Game\handmade_intrinsics.h" />
+    <ClInclude Include="src\Game\handmade_math.h" />
     <ClInclude Include="src\Game\handmade_platform.h" />
     <ClInclude Include="src\Game\handmade_random.h" />
     <ClInclude Include="src\Game\handmade_tile.h" />
