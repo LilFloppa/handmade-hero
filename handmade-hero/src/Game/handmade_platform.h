@@ -192,6 +192,15 @@ typedef struct game_input
 	game_controller_input Controllers[5];
 } game_input;
 
+inline game_controller_input* GetController(game_input* Input, int unsigned ControllerIndex)
+{
+	Assert(ControllerIndex < ArrayCount(Input->Controllers));
+
+	game_controller_input* Result = &Input->Controllers[ControllerIndex];
+	return Result;
+}
+
+
 typedef struct game_memory
 {
 	bool32 IsInitialized;

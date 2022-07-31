@@ -32,6 +32,14 @@ inline v2& operator*=(v2& A, real32 B)
 	return A;
 }
 
+inline v2 operator*(v2 A, real32 B)
+{
+	v2 Result;
+	Result.X = B * A.X;
+	Result.Y = B * A.Y;
+	return Result;
+}
+
 inline v2 operator+(v2 A, v2 B)
 {
 	v2 Result;
@@ -66,6 +74,17 @@ inline v2& operator-=(v2& A, v2& B)
 {
 	A = A - B;
 	return A;
+}
+
+inline real32 Inner(v2 A, v2 B)
+{
+	return A.X * B.X + A.Y * B.Y;
+}
+
+inline real32 LengthSq(v2 A)
+{
+	real32 Result = Inner(A, A);
+	return Result;
 }
 
 #define HANDMADE_MATH

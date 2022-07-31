@@ -4,14 +4,9 @@
 
 #include "handmade_tile.h"
 
-inline game_controller_input* GetController(game_input* Input, int unsigned ControllerIndex)
-{
-    Assert(ControllerIndex < ArrayCount(Input->Controllers));
 
-    game_controller_input* Result = &Input->Controllers[ControllerIndex];
-    return Result;
-}
-
+#define Minimum(A, B) ((A < B) ? (A) : (B))
+#define Maximum(A, B) ((A > B) ? (A) : (B))
 struct memory_arena
 {
     memory_index Size;
@@ -58,16 +53,28 @@ struct hero_bitmaps
     loaded_bitmap Torso;
 };
 
+struct entity
+{
+    tile_map_position Pos;
+    v2 dPos;
+    bool32 Exists;
+    uint32 FacingDirection;
+    real32 Width, Height;
+};
+
 struct game_state
 {
     memory_arena WorldArena;
     world* World;
 
+    uint32 CameraFollowingEntityIndex;
     tile_map_position CameraPos;
-    tile_map_position PlayerPos;
-    loaded_bitmap Backdrop;
 
-    uint32 HeroFacingDirection;
+    uint32 EntityCount;
+    uint32 PlayerIndexForController[ArrayCount(((game_input*)0)->Controllers)];
+    entity Entities[256];
+
+    loaded_bitmap Backdrop;
     hero_bitmaps HeroBitmaps[4];
 };
 
