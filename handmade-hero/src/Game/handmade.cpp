@@ -326,7 +326,7 @@ internal void MovePlayer(game_state* GameState, entity* Entity, real32 dt, v2 dd
 			}
 		}
 
-		Entity->Pos = Offset(TileMap, OldPos, tMin * PlayerDelta); 
+		Entity->Pos = Offset(TileMap, Entity->Pos, tMin * PlayerDelta); 
 		Entity->dPos = Entity->dPos - 1 * Inner(Entity->dPos, WallNormal) * WallNormal;
 		PlayerDelta = PlayerDelta - 1 * Inner(PlayerDelta, WallNormal) * WallNormal;
 		tRemaining -= tMin * tRemaining;
